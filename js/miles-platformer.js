@@ -1,7 +1,10 @@
 window.addEventListener('load', function() {
+
+  // Setup
   var Q = window.Q = Quintus().include('Sprites, Scenes, Input, 2D, Touch, UI, MkiData, Anim')
                               .setup({ maximize: true }).controls().touch();
 
+  // Animations
   Q.animations('miles', {
     invincible: { frames: [0,1,2,3,4], loop: true, rate: 1/15 },
     invincible_done: { frames: [0] } //ghetto hack
@@ -10,16 +13,19 @@ window.addEventListener('load', function() {
     done: { frames: [1] }
   });
 
+  // Sprite Setup
   Q.Sprite.extend('Player', {
     init: function(p) {
-      this._super(p, { sprite: 'miles', sheet: 'miles', x: 410, y: 90, frame: 0});
+      this._super(p, { sprite: 'miles', sheet: 'miles', frame: 0});
       this.add('animation, 2d, platformerControls');
       this.p.score = 0;
       this.p.invincible = false;
       this.p.invincible_animation_priority = 0;
+      this.p.steps_remaining = 3000;
 
       this.on('hit.sprite', function(collision) {
         if (collision.obj.isA('Tower')) {
+          var score = this.p.score + this.p.steps_remaining;
           Q.stageScene('endGame', 1, { label: 'You Won!' });
           this.destroy();
         }
@@ -38,6 +44,9 @@ window.addEventListener('load', function() {
         this.p.invincible_animation_priority += 2;
         this.p.invincible = false;
       });
+    },
+    step: function(e) {
+      this.p.steps_remaining = this.p.steps_remaining - 1;
     }
   });
 
@@ -49,7 +58,7 @@ window.addEventListener('load', function() {
 
       this.on('bump.bottom', function(collision) {
         if (collision.obj.isA('Player') && !this.p.contents_exhausted ) {
-          window.stage.insert(new Q.Powerup({x: this.p.x, y: this.p.y - 32, vx: 100}));
+          Q.stage(0).insert(new Q.Powerup({x: this.p.x, y: this.p.y - 32, vx: 100}));
           this.play('done');
           this.p.contents_exhausted = true;
         }
@@ -104,17 +113,26 @@ window.addEventListener('load', function() {
     }
   });
 
-  Q.scene('level1', function(stage) {
+  // Scene setup
+  // levelLoader expects a level name ('level1'), a corresponding data/level1.tmx file,
+  // and corresponding level1 qboxen, enemies, and tower in mkidata.js
+  // This is a generic levelLoader file, and by no means needed in all levels.
+  function levelLoader(level, stage) {
     stage.insert(new Q.Repeater({ asset: 'background.png', speedX: 0.5, speedY: 0.5 }));
-    stage.collisionLayer(new Q.TileLayer({ dataAsset: 'level1.json', sheet: 'tiles' }));
-    var player = stage.insert(new Q.Player());
+    stage.collisionLayer(new Q.TileLayer({ dataAsset: level + '.tmx', sheet: 'tiles' }));
+    var player = stage.insert(new Q.Player({x: 730, y:2960}));
     stage.add('viewport').follow(player);
-    stage.insert(new Q.Enemy({ x: 700, y: 0 }));
-    stage.insert(new Q.Enemy({ x: 800, y: 0 }));
-    for (var i = 0; i < Q.assets['level1_qbox'].length; i++) {
-      stage.insert(new Q.Qbox(Q.assets['level1_qbox'][i]));
+    for (var i = 0; i < Q.assets[level + '_extras']['qboxen'].length; i++) {
+      stage.insert(new Q.Qbox(Q.assets[level + '_extras']['qboxen'][i]));
     }
-    stage.insert(new Q.Tower({ x: 300, y: 50 }));
+    for (var i = 0; i < Q.assets[level + '_extras']['enemies'].length; i++) {
+      stage.insert(new Q.Enemy(Q.assets[level + '_extras']['enemies'][i]));
+    }
+    stage.insert(new Q.Tower(Q.assets[level + '_extras']['tower']));
+  }
+
+  Q.scene('level1', function(stage) {
+    levelLoader('level1', stage);
   });
 
   Q.scene('endGame', function(stage) {
@@ -132,8 +150,11 @@ window.addEventListener('load', function() {
     box.fit(20);
   });
 
-  //Q.load("sprites.png, sprites.json, level.json, tiles.png", function() {
-  Q.load('tiles.png, miles-sprites.png, enemy-sprite.png, background.png, qbox-sprites.png, cisco-powerup.png, castle.png', function() {
+  // load data
+  levels = 'level1.tmx, level2.tmx';
+  environment = 'tiles.png, background.png';
+  sprites = 'miles-sprites.png, enemy-sprite.png, qbox-sprites.png, cisco-powerup.png, castle.png';
+  Q.load([levels, environment, sprites].join(','), function() {
     Q.sheet('tiles', 'tiles.png', { tilew: 32, tileh: 32 });
     Q.sheet('enemy', 'enemy-sprite.png', {
       tilew: 30,
