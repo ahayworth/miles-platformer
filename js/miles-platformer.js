@@ -140,6 +140,16 @@ window.addEventListener('load', function() {
     stage.insert(new Q.Tower(Q.assets[level + '_extras']['tower']));
   }
 
+  // If you don't want a level defined by levelLoader,
+  // it needs to be in Q.assets['manually_loaded_levels']
+  Q._each(Q.assets['levels'], function(level) {
+    if (Q.assets['manually_loaded_levels'].indexOf(level) == -1) {
+      Q.scene(level, function(stage) {
+        levelLoader(level, stage);
+      });
+    }
+  });
+/*
   Q.scene('level1', function(stage) {
     levelLoader('level1', stage);
   });
@@ -147,6 +157,7 @@ window.addEventListener('load', function() {
   Q.scene('level2', function(stage) {
     levelLoader('level2', stage);
   });
+*/
 
   Q.scene('endGame', function(stage) {
     var box = stage.insert(new Q.UI.Container({
@@ -165,7 +176,7 @@ window.addEventListener('load', function() {
     button.on('click', function() {
       Q.clearStages();
       if (stage.options.dead || window.levels_array.length === 0) {
-        window.levels_array = ['level2', 'level1'];
+        window.levels_array = Q._extend([], Q.assets['levels']);
       }
       Q.stageScene(window.levels_array.pop());
     });
@@ -173,8 +184,8 @@ window.addEventListener('load', function() {
   });
 
   // load data
-  levels = 'level1.tmx, level2.tmx';
-  window.levels_array = ['level2', 'level1'];
+  levels = Q._map(Q.assets['levels'], function(val) { return val + '.tmx'; }).join(',');
+  window.levels_array = Q._extend([], Q.assets['levels']);
   environment = 'tiles.png, background.png';
   sprites = 'miles-sprites.png, enemy-sprite.png, qbox-sprites.png, cisco-powerup.png, castle.png';
   Q.load([levels, environment, sprites].join(','), function() {
