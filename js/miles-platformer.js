@@ -26,7 +26,7 @@ window.addEventListener('load', function() {
       this.on('hit.sprite', function(collision) {
         if (collision.obj.isA('Tower')) {
           var score = this.p.score + this.p.steps_remaining;
-          Q.stageScene('endGame', 1, { label: 'You Won!' });
+          Q.stageScene('endGame', 1, { label: 'You Won!', dead: false});
           this.destroy();
         }
       });
@@ -46,7 +46,12 @@ window.addEventListener('load', function() {
       });
     },
     step: function(e) {
-      this.p.steps_remaining = this.p.steps_remaining - 1;
+      if (this.p.y > 4000) {
+        Q.stageScene('endGame', 1, { label: 'Try again!', dead: true });
+        this.destroy();
+      } else {
+        this.p.steps_remaining = this.p.steps_remaining - 1;
+      }
     }
   });
 
@@ -97,7 +102,7 @@ window.addEventListener('load', function() {
             this.destroy();
             collision.obj.p.score += 100;
           } else {
-            Q.stageScene('endGame', 1, { label: 'Try again!' });
+            Q.stageScene('endGame', 1, { label: 'Try again!', dead: true });
             collision.obj.destroy();
           }
         }
@@ -120,13 +125,17 @@ window.addEventListener('load', function() {
   function levelLoader(level, stage) {
     stage.insert(new Q.Repeater({ asset: 'background.png', speedX: 0.5, speedY: 0.5 }));
     stage.collisionLayer(new Q.TileLayer({ dataAsset: level + '.tmx', sheet: 'tiles' }));
-    var player = stage.insert(new Q.Player({x: 730, y:2960}));
+    var player = stage.insert(new Q.Player(Q.assets[level + '_extras']['player_start']));
     stage.add('viewport').follow(player);
-    for (var i = 0; i < Q.assets[level + '_extras']['qboxen'].length; i++) {
-      stage.insert(new Q.Qbox(Q.assets[level + '_extras']['qboxen'][i]));
+    if (Q.assets[level + '_extras']['qboxen']) {
+      for (var i = 0; i < Q.assets[level + '_extras']['qboxen'].length; i++) {
+        stage.insert(new Q.Qbox(Q.assets[level + '_extras']['qboxen'][i]));
+      }
     }
-    for (var i = 0; i < Q.assets[level + '_extras']['enemies'].length; i++) {
-      stage.insert(new Q.Enemy(Q.assets[level + '_extras']['enemies'][i]));
+    if (Q.assets[level + '_extras']['enemies']) {
+      for (var i = 0; i < Q.assets[level + '_extras']['enemies'].length; i++) {
+        stage.insert(new Q.Enemy(Q.assets[level + '_extras']['enemies'][i]));
+      }
     }
     stage.insert(new Q.Tower(Q.assets[level + '_extras']['tower']));
   }
@@ -135,23 +144,37 @@ window.addEventListener('load', function() {
     levelLoader('level1', stage);
   });
 
+  Q.scene('level2', function(stage) {
+    levelLoader('level2', stage);
+  });
+
   Q.scene('endGame', function(stage) {
     var box = stage.insert(new Q.UI.Container({
       x: Q.width / 2, y: Q.height / 2, fill: 'rgba(0,0,0,0.5)'
     }));
 
-    var button = box.insert(new Q.UI.Button({ x: 0, y: 0, fill: "#CCCCCC", label: 'Play Again'}));
+    console.log(window.levels_array.length)
+    if (stage.options.dead || window.levels_array.length === 0) {
+      var button_text = 'Play Again';
+    } else {
+      var button_text = 'Next level';
+    }
+    var button = box.insert(new Q.UI.Button({ x: 0, y: 0, fill: "#CCCCCC", label: button_text }));
     var label  = box.insert(new Q.UI.Text({x:10, y: -10 - button.p.h, label: stage.options.label }));
 
     button.on('click', function() {
       Q.clearStages();
-      Q.stageScene('level1');
+      if (stage.options.dead || window.levels_array.length === 0) {
+        window.levels_array = ['level2', 'level1'];
+      }
+      Q.stageScene(window.levels_array.pop());
     });
     box.fit(20);
   });
 
   // load data
   levels = 'level1.tmx, level2.tmx';
+  window.levels_array = ['level2', 'level1'];
   environment = 'tiles.png, background.png';
   sprites = 'miles-sprites.png, enemy-sprite.png, qbox-sprites.png, cisco-powerup.png, castle.png';
   Q.load([levels, environment, sprites].join(','), function() {
@@ -178,6 +201,6 @@ window.addEventListener('load', function() {
     });
     Q.compileSheets("miles-sprites.png","miles-sprites.json");
     Q.compileSheets('qbox-sprites.png', 'qbox-sprites.json');
-    Q.stageScene('level1');
+    Q.stageScene(window.levels_array.pop());
   });
 });
