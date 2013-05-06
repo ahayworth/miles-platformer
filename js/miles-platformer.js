@@ -25,8 +25,9 @@ window.addEventListener('load', function() {
 
       this.on('hit.sprite', function(collision) {
         if (collision.obj.isA('Tower')) {
-          var score = this.p.score + this.p.steps_remaining;
-          Q.stageScene('endGame', 1, { label: 'You Won!', dead: false});
+          step_score = this.p.steps_remaining > 0 ? this.p.steps_remaining : 0;
+          var score = this.p.score + step_score;
+          Q.stageScene('endGame', 1, { label: 'You Won!' + ' Score: ' + score, dead: false});
           this.destroy();
         }
       });
@@ -45,6 +46,7 @@ window.addEventListener('load', function() {
         this.p.invincible = false;
       });
     },
+
     step: function(e) {
       if (this.p.y > 4000) {
         Q.stageScene('endGame', 1, { label: 'Try again!', dead: true });
@@ -120,8 +122,8 @@ window.addEventListener('load', function() {
 
   // Scene setup
   // levelLoader expects a level name ('level1'), a corresponding data/level1.tmx file,
-  // and corresponding level1 qboxen, enemies, and tower in mkidata.js
-  // This is a generic levelLoader file, and by no means needed in all levels.
+  // and corresponding level1 qboxen, enemies, player_start, and tower in mkidata.js
+  // This is a generic levelLoader function, and by no means needed in all levels.
   function levelLoader(level, stage) {
     stage.insert(new Q.Repeater({ asset: 'background.png', speedX: 0.5, speedY: 0.5 }));
     stage.collisionLayer(new Q.TileLayer({ dataAsset: level + '.tmx', sheet: 'tiles' }));
@@ -149,15 +151,6 @@ window.addEventListener('load', function() {
       });
     }
   });
-/*
-  Q.scene('level1', function(stage) {
-    levelLoader('level1', stage);
-  });
-
-  Q.scene('level2', function(stage) {
-    levelLoader('level2', stage);
-  });
-*/
 
   Q.scene('endGame', function(stage) {
     var box = stage.insert(new Q.UI.Container({
